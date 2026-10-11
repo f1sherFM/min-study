@@ -3,6 +3,17 @@
   position: relative;
 }
 
+/* vertical tabbar layout (non-mac): the page container shifts to the
+   right of the sidebar. The actual WebContentsView bounds are offset
+   in JS (webviews.getViewBounds); this rule keeps DOM overlays inside
+   #webviews (placeholder, NTP background) aligned with the view. */
+
+body:not(.mac) #webviews {
+  margin-left: var(--sidebar-width);
+  width: calc(100vw - var(--sidebar-width));
+  height: 100vh;
+}
+
 .arrow-indicator {
   width: 140px;
   height: 140px;

@@ -13,6 +13,17 @@
   overflow-y: auto;
 }
 
+/* vertical tabbar layout (non-mac): the searchbar dropdown drops from
+   the floating address bar, so it sits to the right of the sidebar and
+   above it (z-index must beat the glass navbar's z-index: 5) */
+
+body:not(.mac) #searchbar {
+  z-index: 6;
+  left: var(--sidebar-width);
+  width: calc(100vw - var(--sidebar-width));
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 3px 4px -2px;
+}
+
 body:not(.is-ntp) #searchbar,
 body.ntp-has-background #searchbar {
   box-shadow: rgba(0, 0, 0, 0.25) 0px 3px 4px -2px;

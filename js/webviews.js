@@ -158,6 +158,14 @@ const webviews = {
         height: window.innerHeight
       }
     } else {
+      // vertical tabbar layout (non-mac): pages sit to the right of the
+      // left sidebar; keep this in sync with --sidebar-width in css/tabBar.css
+      var isVerticalLayout = !document.body.classList.contains('mac')
+      var sidebarWidth = 0
+      if (isVerticalLayout) {
+        sidebarWidth = parseInt(getComputedStyle(document.body).getPropertyValue('--sidebar-width'), 10) || 220
+      }
+
       if (!hasSeparateTitlebar && (window.platformType === 'linux' || window.platformType === 'windows') && !windowIsMaximized && !windowIsFullscreen) {
         var navbarHeight = 48
       } else {
@@ -167,10 +175,10 @@ const webviews = {
       const viewMargins = webviews.viewMargins
 
       let position = {
-        x: 0 + Math.round(viewMargins[3]),
-        y: 0 + Math.round(viewMargins[0]) + navbarHeight,
-        width: window.innerWidth - Math.round(viewMargins[1] + viewMargins[3]),
-        height: window.innerHeight - Math.round(viewMargins[0] + viewMargins[2]) - navbarHeight
+        x: 0 + Math.round(viewMargins[3]) + sidebarWidth,
+        y: 0 + Math.round(viewMargins[0]) + (isVerticalLayout ? 0 : navbarHeight),
+        width: window.innerWidth - Math.round(viewMargins[1] + viewMargins[3]) - sidebarWidth,
+        height: window.innerHeight - Math.round(viewMargins[0] + viewMargins[2]) - (isVerticalLayout ? 0 : navbarHeight)
       }
 
       return position

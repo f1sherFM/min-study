@@ -1,3 +1,20 @@
+/* ============================================================
+   VERTICAL TABBAR (left sidebar) with glassmorphism.
+   Layout geometry is driven by CSS variables so that JS
+   (webviews.getViewBounds) and CSS stay in sync:
+     --sidebar-width : full outer width of the vertical navbar
+
+   NOTE: on mac we keep the classic horizontal top bar, because
+   the traffic-light window buttons live inside the tab strip
+   (--control-space-left: 75px) and cannot be moved via CSS.
+   ============================================================ */
+
+body {
+  --sidebar-width: 220px;
+}
+
+/* base rules (identical to upstream) so the mac fallback keeps working */
+
 #navbar {
   display: flex;
   height: calc(36px + var(--control-space-top));
@@ -12,8 +29,6 @@
   padding-right: var(--control-space-right);
 }
 
-/* when the tab-group is white, we need a line to separate it from the webviews */
-
 #navbar:before {
   content: "";
   width: 100vw;
@@ -24,23 +39,130 @@
   background: rgba(0, 0, 0, 0.075);
 }
 
-/* dark colors don't need to be darkened as much for contrast */
-
 .dark-theme #navbar:before {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* navbar buttons */
-
-#toolbar-navigation-buttons {
-  width: 2rem;
-  transition: 0.1s width;
-  white-space: nowrap;
+#navbar #tabs {
+  display: flex;
+  flex: 1;
+  position: relative;
   overflow: hidden;
 }
 
-#toolbar-navigation-buttons.can-go-forward:hover {
+#tabs #tabs-inner {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tab-item {
+  flex: 1;
+  min-width: 125px;
+  transition: 0.2s transform;
+  line-height: 36px;
+  height: 36px;
+  overflow: hidden;
+  word-break: break-all;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.tab-item.active {
+  min-width: 168px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.dark-theme .tab-item.active:not(:only-child) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.navbar-right-actions {
+  margin-right: 2.3em;
+}
+
+.navbar-right-actions #add-tab-button {
+  padding: 0;
+  width: 36px;
+  font-size: 1.6em !important;
+}
+
+/* ---------------- vertical sidebar overrides (non-mac) ---------------- */
+
+body:not(.mac) #navbar {
+  flex-direction: column;
+  align-items: stretch;
+  /* fixed column on the left, full height */
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  z-index: 5;
+  padding-top: calc(var(--control-space-top) + 0.5em);
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  padding-bottom: 0.5em;
+  gap: 0.35em;
+
+  /* --- Glassmorphism --- */
+  background: linear-gradient(
+    180deg,
+    rgba(245, 245, 250, 0.55),
+    rgba(235, 235, 245, 0.45)
+  );
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12), inset -1px 0 0 rgba(0, 0, 0, 0.06);
+}
+
+body:not(.mac).dark-theme #navbar {
+  background: linear-gradient(
+    180deg,
+    rgba(30, 33, 40, 0.6),
+    rgba(24, 26, 32, 0.5)
+  );
+  border-right-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45), inset -1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+/* separator moves from the bottom edge to the right edge */
+
+body:not(.mac) #navbar:before {
+  width: 1px;
+  height: 100vh;
+  top: 0;
+  right: 0;
+  bottom: auto;
+  left: auto;
+}
+
+/* navbar buttons */
+
+/* top row of the sidebar: menu button + back/forward */
+
+body:not(.mac) #navbar > #menu-button {
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+body:not(.mac) #toolbar-navigation-buttons {
   width: 4rem;
+  transition: 0.1s width;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+body:not(.mac) #toolbar-navigation-buttons.can-go-forward:hover {
+  width: 6rem;
 }
 
 body.is-edit-mode #toolbar-navigation-buttons {
@@ -78,47 +200,74 @@ body.linux #menu-button {
   display: inline-block;
 }
 
-/* tab layout */
+/* tab layout — vertical list (non-mac); mac keeps the horizontal strip */
 
-#navbar #tabs {
+body:not(.mac) #navbar #tabs {
   display: flex;
+  flex-direction: column;
   flex: 1;
+  min-height: 0; /* allow the list to shrink and scroll inside the column */
   position: relative;
   overflow: hidden;
 }
-#tabs #tabs-inner {
+body:not(.mac) #tabs #tabs-inner {
   display: flex;
+  flex-direction: column;
   flex: 1;
-  overflow-x: auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  gap: 2px;
+}
+
+body:not(.mac) #tabs #tabs-inner.disable-scroll {
   overflow-y: hidden;
 }
 
-#tabs #tabs-inner.disable-scroll {
-  overflow-x: hidden;
-}
-
-.tab-item {
-  flex: 1;
-  min-width: 125px;
+body:not(.mac) .tab-item {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 40px;
   transition: 0.2s transform;
-  line-height: 36px;
-  height: 36px;
+  line-height: 40px;
   overflow: hidden;
   word-break: break-all;
   position: relative;
   display: flex;
   align-items: stretch;
   gap: 0.5rem;
-  padding-left: 0.5rem;
+  padding-left: 0.6rem;
   padding-right: 0.5rem;
+  border-radius: 8px;
+  cursor: default;
 }
-.tab-item.active {
-  min-width: 168px;
+body:not(.mac) .tab-item.active {
+  min-width: 0;
 }
+
+/* glass pills for active / hovered tabs */
+
+body:not(.mac) .tab-item.active {
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.dark-theme body:not(.mac) .tab-item.active,
+body:not(.mac).dark-theme .tab-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+body:not(.mac) .tab-item:not(.active):hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
 .tab-item.gu-mirror {
   top: var(--control-space-top) !important;
-  height: 32px !important;
-  line-height: 32px !important;
+  height: 36px !important;
+  line-height: 36px !important;
   margin-top: 2px !important;
   opacity: 1;
   box-shadow: 0px 0px 7px rgba(0, 0, 0, 0.25);
@@ -149,10 +298,12 @@ body.linux #menu-button {
 }
 
 #navbar.show-dividers .tab-item:not(:last-child) {
-  border-right: 1px solid rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  border-right: none;
 }
 .dark-theme #navbar.show-dividers .tab-item:not(:last-child) {
-  border-right-color: rgba(255, 255, 255, 0.4);
+  border-bottom-color: rgba(255, 255, 255, 0.4);
+  border-right-color: transparent;
 }
 
 #navbar.show-dividers:before {
@@ -208,13 +359,13 @@ body:not(.touch)
   background: rgba(255, 255, 255, 0.15);
 }
 .tab-item.active:not(:only-child) {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.45);
 }
 .dark-theme .tab-item.active:not(:only-child) {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
 }
 .dark-theme.theme-background-low-contrast .tab-item.active:not(:only-child) {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.16);
 }
 .tab-item.fade {
   opacity: 0.55;
@@ -245,6 +396,10 @@ body:not(.touch)
   padding-right: 0.25rem;
   flex: 1;
   overflow: hidden;
+  /* vertical sidebar: single-line ellipsis titles instead of the
+     horizontal scale-on-hover animation (which relied on wide tabs) */
+  text-overflow: ellipsis;
+  mask-image: linear-gradient(to right, black 85%, transparent);
 }
 .compact-tabs .tab-item .title {
   font-size: 14px;
@@ -253,7 +408,7 @@ body:not(.touch)
   display: block;
   position: absolute;
   top: 0;
-  font-size: 15px;
+  font-size: 13.5px;
   transform-origin: left 10%;
   transition: 0.15s transform;
   white-space: nowrap;
@@ -301,13 +456,26 @@ body.windows.dark-theme .navbar-action-button:not(:disabled):hover {
 .navbar-action-button + .navbar-action-button {
   padding-left: 0.5em;
 }
-.navbar-right-actions {
-  margin-right: 2.3em;
+
+/* "new tab" button docks at the bottom of the vertical sidebar */
+body:not(.mac) .navbar-right-actions {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-start;
+  margin-right: 0;
+  padding-top: 0.35em;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+.dark-theme body:not(.mac) .navbar-right-actions,
+body:not(.mac).dark-theme .navbar-right-actions {
+  border-top-color: rgba(255, 255, 255, 0.12);
 }
 
-.navbar-right-actions #add-tab-button {
+body:not(.mac) .navbar-right-actions #add-tab-button {
   padding: 0;
-  width: 36px;
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
   font-size: 1.6em !important;
 }
 
@@ -431,4 +599,58 @@ body:not(.dark-theme) .progress-bar {
 .p100 {
   transform: translateX(0%);
   transition: transform 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ============================================================
+   Window controls that must stay in the TOP-RIGHT corner of the
+   window even though the tabbar itself became a left column.
+   (windows-caption-buttons / linux-control-buttons are absolute
+   against <body>, so they already don't move — we only need to
+   keep them above the glass panel and out of its way.)
+   ============================================================ */
+
+.windows-caption-buttons,
+#linux-control-buttons {
+  z-index: 11; /* above #navbar (z-index: 5) */
+}
+
+/* task-switch button moves from the top-right corner into the
+   bottom of the sidebar, under the "new tab" button */
+
+body:not(.mac) #switch-task-button {
+  position: static !important;
+  right: auto !important;
+  flex-shrink: 0;
+  width: 100%;
+  border-radius: 8px;
+}
+
+/* tab editor ("address bar") spans the window width at the
+   top instead of being trapped inside the now-narrow navbar */
+
+body:not(.mac) #tab-editor {
+  position: fixed;
+  top: var(--control-space-top);
+  left: calc(var(--sidebar-width) + 0.75em);
+  width: calc(100vw - var(--sidebar-width) - var(--control-space-right) - 1.5em);
+  height: 36px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 6;
+}
+
+.dark-theme body:not(.mac) #tab-editor,
+body:not(.mac).dark-theme #tab-editor {
+  background: rgba(35, 38, 45, 0.65);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* the address bar is no longer anchored to the navbar's left edge,
+   so hide the star / content-blocking widgets that used to sit there */
+body:not(.mac) #tab-editor .tab-editor-button {
+  display: none !important;
 }
