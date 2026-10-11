@@ -63,6 +63,20 @@ if (isDevelopmentMode) {
 // workaround for flicker when focusing app (https://github.com/electron/electron/issues/17942)
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows', 'true')
 
+/* DPI-evasion / proxy hardening (must run BEFORE app is ready):
+   1. 'socks5://' in Chromium already sends the hostname to the proxy for
+      remote resolution (RFC 1928 ATYP=DOMAIN), but the local resolver is
+      still used for preconnect, devtools, and some network-service paths.
+   2. host-resolver-rules with MAP * ~NOTFOUND kills the local resolver
+      completely: every name fails locally, so only the proxy's remote
+      resolution can succeed -> zero plaintext DNS leaks to the ISP.
+   3. EXCLUDE keeps loopback working (Min uses min:// + local IPC on 127.0.0.1). */
+app.commandLine.appendSwitch('host-resolver-rules', 'MAP * ~NOTFOUND , EXCLUDE 127.0.0.1 , EXCLUDE localhost')
+app.commandLine.appendSwitch('proxy-server', 'socks5://127.0.0.1:10808')
+// disable Chromium's implicit "<-loopback>" bypass rule so even local-looking
+// requests go through the tunnel (tunneled DNS answers are trusted remotely)
+app.commandLine.appendSwitch('proxy-bypass-list', '<-loopback>')
+
 var userDataPath = app.getPath('userData')
 
 settings.initialize(userDataPath)
@@ -366,9 +380,38 @@ app.on('ready', function () {
     return
   }
 
-  // route all traffic through the local SOCKS5 tunnel
-  session.defaultSession.setProxy({
-    proxyRules: 'socks5://127.0.0.1:10808'
+  // route all traffic through the local SOCKS5 tunnel; DNS must be resolved
+  // by the proxy too (socks5h semantics), otherwise the ISP sees plain DNS
+  // and the DPI resets connections (ERR_CONNECTION_RESET / -101).
+  const PROXY_RULES = 'socks5://127.0.0.1:10808'
+
+  function hardenSession (ses) {
+    ses.setProxy({
+      proxyRules: PROXY_RULES,
+      proxyBypassRules: '<local>;localhost;127.0.0.1;*.localhost',
+      mode: 'fixed_servers'
+    })
+
+    // verification: after setProxy takes effect, ask Chromium to resolve a
+    // known-blocked name THROUGH the proxy. If DNS were leaking locally,
+    // host-resolver-rules (~NOTFOUND) would make this fail outright.
+    ses.resolveProxy('example.com').then(function (result) {
+      console.log('[proxy-harden] resolveProxy(example.com) =', result)
+    }).catch(function (err) {
+      console.warn('[proxy-harden] resolveProxy failed:', err)
+    })
+  }
+
+  hardenSession(session.defaultSession)
+
+  // Min's tab views live in defaultSession (viewManager.js uses no partition),
+  // but any future/legacy partitioned session gets the same treatment
+  ;['persist:webviewsession', 'persist:webcontent'].forEach(function (partitionName) {
+    try {
+      hardenSession(session.fromPartition(partitionName))
+    } catch (e) {
+      console.warn('failed to configure proxy for', partitionName, e)
+    }
   })
 
   registerBundleProtocol(session.defaultSession)
