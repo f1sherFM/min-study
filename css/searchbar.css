@@ -19,7 +19,8 @@
    (z-index must beat the navbar's z-index: 5) */
 
 body:not(.mac) #searchbar {
-  z-index: 6;
+  z-index: 10000; /* above the glass panel (9999): stays clickable while the
+                     panel is expanded over it */
   left: var(--sidebar-collapsed-width);
   width: calc(100vw - var(--sidebar-collapsed-width));
   box-shadow: rgba(0, 0, 0, 0.25) 0px 3px 4px -2px;

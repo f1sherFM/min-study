@@ -7,10 +7,11 @@
                                  ALL the webview bounds ever subtract
                                  (js/webviews.js reads this variable)
      --sidebar-expanded-width  : hover/reveal width; the expanded
-                                 panel OVERLAYS the page (z-index 5 >
-                                 #webviews z-index 1), content never
-                                 reflows. User can drag the right edge
-                                 to change it (persisted to settings).
+                                 panel OVERLAYS the page (#navbar
+                                 z-index 9999 > #webviews z-index 1),
+                                 content never reflows. User can drag
+                                 the right edge to change it (persisted
+                                 to settings).
      --sidebar-width           : current actual width of the panel
                                  (collapsed unless body.sidebar-expanded)
 
@@ -116,7 +117,9 @@ body:not(.mac) #navbar {
   bottom: 0;
   width: var(--sidebar-width);
   height: 100vh;
-  z-index: 5;
+  /* overlay above the site content (#webviews z-index 1) — expanded
+     panel must never be covered by, nor push, open pages */
+  z-index: 9999;
   padding-top: calc(var(--control-space-top) + 0.5em);
   padding-left: 0.5em;
   padding-right: 0.5em;
@@ -183,13 +186,15 @@ body:not(.mac) #switch-task-button {
   text-align: center;
 }
 
+/* back/forward buttons are not used in this fork — removed entirely */
+
 body:not(.mac) #toolbar-navigation-buttons {
-  width: 4rem;
-  margin: 0 auto;
-  transition: 0.1s width;
-  white-space: nowrap;
-  overflow: hidden;
-  flex-shrink: 0;
+  display: none !important;
+}
+
+#back-button,
+#forward-button {
+  display: none !important;
 }
 
 body:not(.mac).dark-theme #navbar {
@@ -222,13 +227,7 @@ body:not(.mac) #navbar > #menu-button {
   flex-shrink: 0;
 }
 
-body:not(.mac) #toolbar-navigation-buttons.can-go-forward:hover {
-  width: 6rem;
-}
-
-body.is-edit-mode #toolbar-navigation-buttons {
-  display: none;
-}
+/* back/forward removed — nothing to size/animate for them anymore */
 
 #back-button,
 #forward-button {
@@ -672,7 +671,8 @@ body:not(.dark-theme) .progress-bar {
 
 .windows-caption-buttons,
 #linux-control-buttons {
-  z-index: 11; /* above #navbar (z-index: 5) */
+  z-index: 10003; /* above #navbar (9999): window controls must stay clickable
+                     even when the glass panel expands over the page */
 }
 
 /* task-switch button moves from the top-right corner into the
@@ -703,8 +703,8 @@ body:not(.mac) #tab-editor {
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  z-index: 6; /* above the glass panel (5): stays clickable while the
-                expanded sidebar overlays the page */
+  z-index: 10001; /* above the glass panel (9999): stays clickable while the
+                     expanded sidebar overlays the page */
 }
 
 .dark-theme body:not(.mac) #tab-editor,
@@ -737,7 +737,8 @@ body:not(.mac) #sidebar-resize-handle {
   width: 8px;
   transform: translateX(-50%);
   cursor: ew-resize;
-  z-index: 10; /* above the glass panel, below window caption buttons (11) */
+  z-index: 10002; /* above the glass panel (9999) so the edge grab always
+                     works, whether the panel is collapsed or expanded */
   background: transparent;
   transition: left 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
