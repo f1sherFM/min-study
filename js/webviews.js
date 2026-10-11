@@ -159,11 +159,14 @@ const webviews = {
       }
     } else {
       // vertical tabbar layout (non-mac): pages sit to the right of the
-      // left sidebar; keep this in sync with --sidebar-width in css/tabBar.css
+      // left sidebar. The reserved width is ALWAYS the collapsed width —
+      // when the user hovers, the panel expands as an overlay (z-index 5)
+      // on top of the view and the bounds below stay untouched, so open
+      // pages never reflow while hovering or dragging the resize handle.
       var isVerticalLayout = !document.body.classList.contains('mac')
       var sidebarWidth = 0
       if (isVerticalLayout) {
-        sidebarWidth = parseInt(getComputedStyle(document.body).getPropertyValue('--sidebar-width'), 10) || 220
+        sidebarWidth = parseInt(getComputedStyle(document.body).getPropertyValue('--sidebar-collapsed-width'), 10) || 60
       }
 
       if (!hasSeparateTitlebar && (window.platformType === 'linux' || window.platformType === 'windows') && !windowIsMaximized && !windowIsFullscreen) {

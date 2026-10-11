@@ -14,13 +14,14 @@
 }
 
 /* vertical tabbar layout (non-mac): the searchbar dropdown drops from
-   the floating address bar, so it sits to the right of the sidebar and
-   above it (z-index must beat the glass navbar's z-index: 5) */
+   the floating address bar, which is anchored to the collapsed sidebar
+   width (the only reserved width), and renders above the glass navbar
+   (z-index must beat the navbar's z-index: 5) */
 
 body:not(.mac) #searchbar {
   z-index: 6;
-  left: var(--sidebar-width);
-  width: calc(100vw - var(--sidebar-width));
+  left: var(--sidebar-collapsed-width);
+  width: calc(100vw - var(--sidebar-collapsed-width));
   box-shadow: rgba(0, 0, 0, 0.25) 0px 3px 4px -2px;
 }
 

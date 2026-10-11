@@ -1,8 +1,18 @@
 /* ============================================================
-   VERTICAL TABBAR (left sidebar) with glassmorphism.
+   VERTICAL TABBAR (left sidebar) with glassmorphism + Zen-style
+   collapse/expand behavior.
    Layout geometry is driven by CSS variables so that JS
    (webviews.getViewBounds) and CSS stay in sync:
-     --sidebar-width : full outer width of the vertical navbar
+     --sidebar-collapsed-width : permanent reserved width — this is
+                                 ALL the webview bounds ever subtract
+                                 (js/webviews.js reads this variable)
+     --sidebar-expanded-width  : hover/reveal width; the expanded
+                                 panel OVERLAYS the page (z-index 5 >
+                                 #webviews z-index 1), content never
+                                 reflows. User can drag the right edge
+                                 to change it (persisted to settings).
+     --sidebar-width           : current actual width of the panel
+                                 (collapsed unless body.sidebar-expanded)
 
    NOTE: on mac we keep the classic horizontal top bar, because
    the traffic-light window buttons live inside the tab strip
@@ -10,7 +20,9 @@
    ============================================================ */
 
 body {
-  --sidebar-width: 220px;
+  --sidebar-collapsed-width: 60px;
+  --sidebar-expanded-width: 250px; /* overridden from settings at startup */
+  --sidebar-width: var(--sidebar-collapsed-width);
 }
 
 /* base rules (identical to upstream) so the mac fallback keeps working */
@@ -121,6 +133,63 @@ body:not(.mac) #navbar {
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-right: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12), inset -1px 0 0 rgba(0, 0, 0, 0.06);
+
+  /* smooth Zen-style collapse/expand (width is driven by --sidebar-width) */
+  transition: width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: width;
+}
+
+/* ---------------- Zen-style collapse / expand (non-mac) ----------------
+   Collapsed (default): only favicons are visible.
+   Expanded: body.sidebar-expanded is set by js/browser.js while the
+   pointer is over the panel (or while the user drags the resize handle).
+   The expanded panel simply grows OVER the page content (z-index 5 vs
+   #webviews z-index 1) — the webview bounds never change on hover.     */
+
+body:not(.mac).sidebar-expanded #navbar {
+  --sidebar-width: var(--sidebar-expanded-width);
+}
+
+/* hide the title text and close buttons in the collapsed state */
+body:not(.mac) .tab-item .title-container,
+body:not(.mac) .tab-item .tab-close-button {
+  opacity: 0;
+  transition: opacity 0.15s ease 0.05s;
+  pointer-events: none;
+}
+
+body:not(.mac).sidebar-expanded .tab-item .title-container {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body:not(.mac).sidebar-expanded .tab-item:hover .tab-close-button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* keep favicons centered while collapsed */
+body:not(.mac) .tab-item {
+  justify-content: center;
+}
+body:not(.mac).sidebar-expanded .tab-item {
+  justify-content: flex-start;
+}
+
+/* nav / menu icons stay centered in both states; titles get the space */
+body:not(.mac) #navbar > #menu-button,
+body:not(.mac) .navbar-right-actions #add-tab-button,
+body:not(.mac) #switch-task-button {
+  text-align: center;
+}
+
+body:not(.mac) #toolbar-navigation-buttons {
+  width: 4rem;
+  margin: 0 auto;
+  transition: 0.1s width;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 body:not(.mac).dark-theme #navbar {
@@ -149,15 +218,7 @@ body:not(.mac) #navbar:before {
 /* top row of the sidebar: menu button + back/forward */
 
 body:not(.mac) #navbar > #menu-button {
-  align-self: flex-start;
-  flex-shrink: 0;
-}
-
-body:not(.mac) #toolbar-navigation-buttons {
-  width: 4rem;
-  transition: 0.1s width;
-  white-space: nowrap;
-  overflow: hidden;
+  align-self: center;
   flex-shrink: 0;
 }
 
@@ -626,13 +687,15 @@ body:not(.mac) #switch-task-button {
 }
 
 /* tab editor ("address bar") spans the window width at the
-   top instead of being trapped inside the now-narrow navbar */
+   top instead of being trapped inside the now-narrow navbar.
+   It is anchored to the COLLAPSED sidebar width, which is the only
+   width the layout ever reserves — so it never jumps on hover. */
 
 body:not(.mac) #tab-editor {
   position: fixed;
   top: var(--control-space-top);
-  left: calc(var(--sidebar-width) + 0.75em);
-  width: calc(100vw - var(--sidebar-width) - var(--control-space-right) - 1.5em);
+  left: calc(var(--sidebar-collapsed-width) + 0.75em);
+  width: calc(100vw - var(--sidebar-collapsed-width) - var(--control-space-right) - 1.5em);
   height: 36px;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(20px) saturate(180%);
@@ -640,7 +703,8 @@ body:not(.mac) #tab-editor {
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  z-index: 6;
+  z-index: 6; /* above the glass panel (5): stays clickable while the
+                expanded sidebar overlays the page */
 }
 
 .dark-theme body:not(.mac) #tab-editor,
@@ -653,4 +717,50 @@ body:not(.mac).dark-theme #tab-editor {
    so hide the star / content-blocking widgets that used to sit there */
 body:not(.mac) #tab-editor .tab-editor-button {
   display: none !important;
+}
+
+/* ---------------- drag-to-resize handle (right edge of panel) --------
+   Invisible 6px strip straddling the sidebar border; cursor: ew-resize.
+   Logic lives in js/browser.js (initSidebarResize), which writes the
+   dragged value into --sidebar-expanded-width and persists it.        */
+
+#sidebar-resize-handle {
+  display: none;
+}
+
+body:not(.mac) #sidebar-resize-handle {
+  display: block;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sidebar-width) - 3px);
+  width: 8px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  z-index: 10; /* above the glass panel, below window caption buttons (11) */
+  background: transparent;
+  transition: left 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* widen the visual hit feedback while hovering/dragging the edge */
+body:not(.mac) #sidebar-resize-handle:hover,
+body:not(.mac).sidebar-resizing #sidebar-resize-handle {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(120, 120, 160, 0.35),
+    transparent
+  );
+}
+
+/* during a drag: freeze the CSS transition (handle follows the mouse
+   1:1) and keep the panel expanded even if the pointer escapes it */
+body:not(.mac).sidebar-resizing #navbar,
+body:not(.mac).sidebar-resizing #sidebar-resize-handle {
+  transition: none;
+}
+
+body:not(.mac).sidebar-resizing {
+  cursor: ew-resize;
+  user-select: none;
 }

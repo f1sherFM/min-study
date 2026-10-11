@@ -4,13 +4,14 @@
 }
 
 /* vertical tabbar layout (non-mac): the page container shifts to the
-   right of the sidebar. The actual WebContentsView bounds are offset
-   in JS (webviews.getViewBounds); this rule keeps DOM overlays inside
-   #webviews (placeholder, NTP background) aligned with the view. */
+   right of the sidebar by the COLLAPSED width only — that is the strip
+   the layout permanently reserves (webviews.getViewBounds subtracts the
+   same variable). When the panel expands on hover it overlays #webviews
+   instead of pushing it, so pages never reflow. */
 
 body:not(.mac) #webviews {
-  margin-left: var(--sidebar-width);
-  width: calc(100vw - var(--sidebar-width));
+  margin-left: var(--sidebar-collapsed-width);
+  width: calc(100vw - var(--sidebar-collapsed-width));
   height: 100vh;
 }
 
